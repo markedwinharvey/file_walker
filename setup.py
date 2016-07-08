@@ -3,10 +3,10 @@ from setuptools import setup
 def main():
 
 	setup(
-		name='file_walker',
+		name='filewalker',
 		version='0.1',
 		description='walk and log a file hierarchy',
-		packages=['file_walker'],
+		packages=['filewalker'],
 		author='meh',	
 	)
 

@@ -1,4 +1,4 @@
-<h4>file_walker.py</h4>
+<h4>filewalker.py</h4>
 
 Recursively walk a file hierarchy, logging data and tracking depth. 
 
@@ -10,7 +10,7 @@ Installation:
 Usage:
 
 	#!/usr/bin/env python
-	import file_walker as fw
+	import filewalker as fw
 	root='/Users/CountChocula'		#optional arg (default is current directory)
 	max_depth=None					#optional arg (default is None; accepts integers)
 	files,dirs,ftree = fw.walk(root=root, max_depth=max_depth)
