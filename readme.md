@@ -13,7 +13,8 @@ Usage:
 	import filewalker as fw
 	root='/Users/CountChocula'		#optional arg (default is current directory)
 	max_depth=None					#optional arg (default is None; accepts integers)
-	files,dirs,ftree = fw.walk(root=root, max_depth=max_depth)
+	print_all=False					#optional arg (default is True)
+	files,dirs,ftree = fw.walk(root=root, max_depth=max_depth, print_all=print_all)
 	fw.walk()						#(alternatively)	
 
 Files and directories are printed to stdout as they are assessed, showing current depth. 
