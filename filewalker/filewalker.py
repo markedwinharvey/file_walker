@@ -4,12 +4,16 @@
 
 #--Recursively walk a file heirarchy while logging data and tracking depth--#
 
+#--install filewalker:
+	python setup.py install
+
 #Usage:
 #
 #!/usr/bin/env python
 import filewalker as fw
 root='/Users/CountChocula'		#optional argument (default is current directory)
 max_depth=None					#optional argument (accepts integers; default is None)
+print_all=False					#optional; print files and messages (default is True)
 files,dirs,ftree = fw.walk(root=root, max_depth=max_depth)
 
 #--output is tuple of objects--#
@@ -25,6 +29,7 @@ Optional arguments:
 	root: root directory as absolute path (defaults to current dir)
 	max_depth: maximum depth to descend in hierarchy (default is None)
 		e.g., max_depth=0 scans only root (or curr dir if no root specified)
+	print_all: show files as they are scanned and print messages
 
 Output (tuple):
 	all_file_list, all_dir_list, f_tree
@@ -44,13 +49,18 @@ import os
 import sys
 
 def walk(**kwargs):
-	'''  accept keyword arguments 'root' and 'max_depth'  '''
-	print '#--------------------------------#'
-	print '#-------- filewalker.py ---------#'
-	print '#--------------------------------#'
+	'''  accept keyword arguments 'root', 'max_depth' and 'print_all' '''
+	print_all = True
+	if 'print_all' in kwargs.keys():
+		print_all = kwargs['print_all']
+	if print_all:
+		print '#--------------------------------#'
+		print '#-------- filewalker.py ---------#'
+		print '#--------------------------------#'
 	
 	def exit():
-		print; print 'Exiting...'; print
+		if print_all:
+			print; print 'Exiting...'; print
 		sys.exit()
 	
 	class file_tree():
@@ -90,7 +100,8 @@ def walk(**kwargs):
 	if 'root' in kwargs.keys():
 		root = kwargs['root']
 		if not os.path.exists(root):
-			print 'not a viable path'
+			if print_all:
+				print 'not a viable path'
 			exit()
 			
 	if 'max_depth' in kwargs.keys() and kwargs['max_depth'] is not None:
@@ -98,7 +109,8 @@ def walk(**kwargs):
 		try:
 			max_depth = int(max_depth)
 		except:
-			print 'invalid depth'
+			if print_all:
+				print 'invalid depth'
 			exit()
 		if max_depth < 0:
 			max_depth = 0
@@ -120,7 +132,8 @@ def walk(**kwargs):
 			
 		
 		for this_node in folder_contents:
-			print curr_depth*'---'+this_node
+			if print_all:
+				print curr_depth*'---'+this_node
 			this_node_path = os.path.abspath(os.path.join(this_dir_path,this_node))
 			
 			#convert to rel path
