@@ -47,6 +47,7 @@ $ python
 import subprocess as sp
 import os
 import sys
+import operator
 
 #------class declarations------#
 
@@ -79,8 +80,7 @@ class dir():
 #------general functions------#
 
 def exit():
-	if print_all:
-		print; print 'Exiting...'; print
+	print; print 'Exiting...'; print
 	sys.exit()
 
 def get_root(kwargs):
@@ -114,9 +114,9 @@ def walk(**kwargs):
 	'''  accept keyword arguments 'root', 'max_depth' and 'print_all' '''
 	
 	print_all = True
-	if 'print_all' in kwargs.keys():
-		print_all = kwargs['print_all']
-		
+	if kwargs.get('print_all'):
+		print_all = True if kwargs['print_all'] in [True,'True'] else False
+	
 	if print_all:
 		print '#--------------------------------#'
 		print '#-------- filewalker.py ---------#'
@@ -246,9 +246,29 @@ def walk(**kwargs):
 		post_walk(f_tree.root)
 	
 	
-	#---output from filewalker	
+	#----------- print largest dirs and files -------------#
+	print '#----- Largest dirs: -----#'
+	large_dirs = [(x.rel,x.size) for x in sorted(all_dir_list,key=operator.attrgetter('size'))[::-1]][:10]
+	for d in large_dirs:
+		print d[0]
+		mod_size = str(d[1])[::-1]
+		print '  ', ','.join( mod_size[x:x+3] for x in range(0,len(mod_size),3) )[::-1],'b'
+	print '#-------------------------#'
+	
+	print
+	
+	print '#----- Largest files: -----#'
+	large_files = [(x.rel,x.size) for x in sorted(all_file_list,key=operator.attrgetter('size'))[::-1]][:10]
+	for f in large_files:
+		print f[0]
+		mod_size = str(f[1])[::-1]
+		print '  ', ','.join( mod_size[x:x+3] for x in range(0,len(mod_size),3) )[::-1],'b'
+	print '#-------------------------#'
+	
+	
+	#--- output from filewalker	---#
 	return all_file_list, all_dir_list, f_tree
-	#-------------------------
+	#------------------------------#
 
 
 def main():
