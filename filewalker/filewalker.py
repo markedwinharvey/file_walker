@@ -14,6 +14,7 @@ import filewalker as fw
 root='/Users/CountChocula'		#optional argument (default is current directory)
 max_depth=None					#optional argument (accepts integers; default is None)
 print_all=False					#optional; print files and messages (default is True)
+
 files,dirs,ftree = fw.walk(root=root, max_depth=max_depth)
 
 #--output is tuple of objects--#
@@ -127,6 +128,7 @@ def walk(**kwargs):
 	all_file_list = []
 	all_dir_list = []
 	curr_node_list = []
+	
 	
 	root = get_root(kwargs)
 	max_depth = get_max_depth(kwargs)
@@ -264,6 +266,11 @@ def walk(**kwargs):
 		mod_size = str(f[1])[::-1]
 		print '  ', ','.join( mod_size[x:x+3] for x in range(0,len(mod_size),3) )[::-1],'b'
 	print '#-------------------------#'
+	
+	print 'Total directories: %d' 	% len( all_dir_list )
+	print 'Total files: %d' 		% len( all_file_list ) 
+	print 'Total file size: %d b' 	% sum([ x.size for x in all_file_list ]) 
+	
 	
 	
 	#--- output from filewalker	---#
