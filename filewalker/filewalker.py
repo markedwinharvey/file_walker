@@ -1,48 +1,45 @@
 #!/usr/bin/env python
 '''
-#--filewalker.py--#
+filewalker.py
 
-#--Recursively walk a file heirarchy while logging data and tracking depth--#
+Recursively walk a file heirarchy while logging data and tracking depth
+filewalker.py returns tuple of objects: 
+	files 	(node list)
+	dirs 	(node list)
+	ftree 	(node tree)
 
-#--install filewalker:
+
+Installation:
+ 
 	python setup.py install
 
-#Usage:
-#
-#!/usr/bin/env python
-import filewalker as fw
-root='/Users/CountChocula'		#optional argument (default is current directory)
-max_depth=None					#optional argument (accepts integers; default is None)
-print_all=False					#optional; print files and messages (default is True)
 
-files,dirs,ftree = fw.walk(root=root, max_depth=max_depth)
+Usage:
 
-#--output is tuple of objects--#
-#--files & dirs are node lists; ftree is a node tree--#
+	#!/usr/bin/env python
+	import filewalker as fw
+	
+	root='/Users/CountChocula'		#optional kwarg (default is current directory)
+	max_depth=None					#optional kwarg (accepts integers; default is None; max_depth=0 scans only root)
+	print_all=False					#optional kwarg; print files and messages (default is True)
 
-#Usage:
-#
-for f in files:
-	print f.name, f.rel, f.abs, f.size		#rel=relative, abs=absolute paths; dirs node list is structurally identical
+	files, dirs, ftree = fw.walk( root=root, max_depth=max_depth, print_all=print_all )
+
+Use the returned data (output as tuple): 
+
+	for f in files:								#files is list of file nodes
+		print f.name, f.rel, f.abs, f.size		#rel=relative path, abs=absolute path
+		
+	for d in dirs:								#dirs is list of dir nodes
+		print d.name, d.rel, d.abs, d.size
 
 
-Optional arguments:
-	root: root directory as absolute path (defaults to current dir)
-	max_depth: maximum depth to descend in hierarchy (default is None)
-		e.g., max_depth=0 scans only root (or curr dir if no root specified)
-	print_all: show files as they are scanned and print messages
+Interactive Usage:
 
-Output (tuple):
-	all_file_list, all_dir_list, f_tree
-
-File (file) and directory (dir) objects (which are collected in their respective lists)
-are instantiated with name, relative path (to 'root'), and absolute path. 
-
-#Interactive Usage:
-
-$ python
->>> import filewalker
->>> filewalker.walk()
+	$ python
+	>>> import filewalker
+	>>> filewalker.walk()
+	
 '''
 
 import subprocess as sp
@@ -84,17 +81,22 @@ def exit():
 	print; print 'Exiting...'; print
 	sys.exit()
 
-def get_root(kwargs):
-	root = sp.Popen(['pwd'],stdout=sp.PIPE).communicate()[0].replace('\n','')
-	if 'root' in kwargs.keys():
-		root = kwargs['root']
+
+def get_root(**kwargs):
+	'''confirm valid path for **kwarg 'root'; if unspecified, use root = cwd '''
+	
+	root = kwargs.get('root')
+	if not root:
+		root = sp.Popen(['pwd'],stdout=sp.PIPE).communicate()[0].replace('\n','')
+	else:
 		if not os.path.exists(root):
 			if print_all:
 				print 'not a viable path'
 			exit()
-	return root
+	return os.path.abspath(root)
 
-def get_max_depth(kwargs):
+
+def get_max_depth(**kwargs):
 	max_depth = None
 	if 'max_depth' in kwargs.keys() and kwargs['max_depth'] is not None:
 		max_depth = kwargs['max_depth']
@@ -109,15 +111,22 @@ def get_max_depth(kwargs):
 	return max_depth
 
 
+def format_size(num):
+	''' Return formatted file size of input num as string; e.g., 14156348 --> 14.1 MB'''
+	rnum = str(int(num))[::-1]
+	slist = zip( [rnum[x:x+3][::-1] for x in range(0,len(rnum), 3) ] , 'B KB MB GB TB'.split(' ') )
+	size = slist[-1][0]
+	if len(slist) > 1:
+		size += '.' + slist[-2][0][0]
+	return '%s %s' % (size, slist[-1][1])
+
+
 #------walk functions------#
 
 def walk(**kwargs):
-	'''  accept keyword arguments 'root', 'max_depth' and 'print_all' '''
-	
-	print_all = True
-	if kwargs.get('print_all'):
-		print_all = True if kwargs['print_all'] in [True,'True'] else False
-	
+	'''  accept **kwargs: 'root', 'max_depth' and 'print_all' '''	
+	print_all = True if kwargs.get('print_all') else False
+
 	if print_all:
 		print '#--------------------------------#'
 		print '#-------- filewalker.py ---------#'
@@ -130,8 +139,8 @@ def walk(**kwargs):
 	curr_node_list = []
 	
 	
-	root = get_root(kwargs)
-	max_depth = get_max_depth(kwargs)
+	root = get_root(**kwargs)
+	max_depth = get_max_depth(**kwargs)
 	
 	new_node = dir(			#make root
 		name	= root.split('/')[-1],
@@ -153,7 +162,7 @@ def walk(**kwargs):
 		
 		this_dir_path = curr_node_list[-1].abs
 		
-		cmd = 'ls \'' + str(this_dir_path)+'\''
+		cmd = 'ls %s' % str(this_dir_path)
 		folder_contents = [x for x in sp.Popen([cmd],stdout=sp.PIPE,shell=True).communicate()[0].split('\n') if x]
 		
 		if not folder_contents:
@@ -249,6 +258,8 @@ def walk(**kwargs):
 	
 	
 	#----------- print largest dirs and files -------------#
+	#---------------------------------------------#
+	#
 	print '#----- Largest dirs: -----#'
 	large_dirs = [(x.rel,x.size) for x in sorted(all_dir_list,key=operator.attrgetter('size'))[::-1]][:10]
 	for d in large_dirs:
@@ -269,8 +280,15 @@ def walk(**kwargs):
 	
 	print 'Total directories: %d' 	% len( all_dir_list )
 	print 'Total files: %d' 		% len( all_file_list ) 
-	print 'Total file size: %d b' 	% sum([ x.size for x in all_file_list ]) 
 	
+	tfs =  sum([ x.size for x in all_file_list ])
+	fsize = format_size(tfs)
+	
+	print 'Total file(s) size: %s' % fsize
+	
+	#
+	#---------------------------------------------#
+	#----------- print largest dirs and files -------------#
 	
 	
 	#--- output from filewalker	---#
@@ -279,7 +297,6 @@ def walk(**kwargs):
 
 
 def main():
-	
 	pass
 if __name__ == '__main__':
 	main()
