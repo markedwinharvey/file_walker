@@ -2,7 +2,8 @@
 '''
 filewalker.py
 
-Recursively walk a file heirarchy while logging data and tracking depth
+Depth-first filesystem traversal and logging
+
 filewalker.py returns tuple of objects: 
 	files 	(node list)
 	dirs 	(node list)
@@ -25,9 +26,10 @@ Usage:
 
 	files, dirs, ftree = fw.walk( root=root, max_depth=max_depth, print_all=print_all )
 
+
 Use the returned data (output as tuple): 
 
-	for f in files:								#files is list of file nodes
+	for f in files:								#files is list of file nodes (in order of assessment)
 		print f.name, f.rel, f.abs, f.size		#rel=relative path, abs=absolute path
 		
 	for d in dirs:								#dirs is list of dir nodes
@@ -40,6 +42,12 @@ Interactive Usage:
 	>>> import filewalker
 	>>> filewalker.walk()
 	
+	>>> files, dirs, ftree = filewalker.walk()
+	>>> ftree
+	<filewalker.filewalker.file_tree instance at 0x10cf74c20>
+	>>> dir(ftree.root)
+	['__doc__', '__init__', '__module__', 'abs', 'children', 'depth', 'fsize', 'name', 'parent', 'rel', 'size', 'type']
+	
 '''
 
 import subprocess as sp
@@ -47,39 +55,55 @@ import os
 import sys
 import operator
 
-#------class declarations------#
+#--------------------------#
+#--- class declarations ---#
+#--------------------------#
 
 class file_tree():
 	def __init__(self,root):
 		self.root=root
 
 class file():
-	def __init__(self,name,rel,abs,size,parent,depth):
-		self.name=name
-		self.rel=rel
-		self.abs=abs
-		self.size=size
-		self.parent=parent
-		self.depth=depth
-		self.type='f'
+	def __init__(self, name, rel, abs, size, parent, depth):
+		self.name	= name
+		self.rel	= rel
+		self.abs	= abs
+		self.size	= size
+		self.parent	= parent
+		self.depth	= depth
+		self.type	= 'f'
+		self.fsize	= format_size(size)
+		self.fsize0	= self.fsize.split(' ')[0]
+		self.fsize1 = self.fsize.split(' ')[1]
 
 class dir():
-	def __init__(self,name,rel,abs,size,parent,depth):
-		self.name=name
-		self.rel=rel
-		self.abs=abs
-		self.children=[]
-		self.size = size
-		self.parent=parent
-		self.depth=depth
-		self.type='d'
+	def __init__(self, name, rel, abs, size, parent, depth):
+		self.name		= name
+		self.rel		= rel
+		self.abs		= abs
+		self.children	= []
+		self.size 		= size
+		self.parent		= parent
+		self.depth		= depth
+		self.type		= 'd'
+		self.fsize		= '0 B'
+		self.fsize0 	= self.fsize.split(' ')[0]
+		self.fsize1 	= self.fsize.split(' ')[1]
 
 
-#------general functions------#
+#-------------------------#
+#---- misc. functions ----#
+#-------------------------#
 
 def exit():
 	print; print 'Exiting...'; print
 	sys.exit()
+
+
+def ps(msg):
+	''' print messages if print_all == True '''
+	if print_all:
+		print msg
 
 
 def get_root(**kwargs):
@@ -90,8 +114,7 @@ def get_root(**kwargs):
 		root = sp.Popen(['pwd'],stdout=sp.PIPE).communicate()[0].replace('\n','')
 	else:
 		if not os.path.exists(root):
-			if print_all:
-				print 'not a viable path'
+			ps('not a viable path')
 			exit()
 	return os.path.abspath(root)
 
@@ -103,8 +126,7 @@ def get_max_depth(**kwargs):
 		try:
 			max_depth = int(max_depth)
 		except:
-			if print_all:
-				print 'invalid depth'
+			ps('invalid depth')
 			exit()
 		if max_depth < 0:
 			max_depth = 0
@@ -121,18 +143,29 @@ def format_size(num):
 	return '%s %s' % (size, slist[-1][1])
 
 
-#------walk functions------#
-
+#------------------------#
+#------ FILEWALKER ------#
+#------------------------#
 def walk(**kwargs):
-	'''  accept **kwargs: 'root', 'max_depth' and 'print_all' '''	
-	print_all = True if kwargs.get('print_all') else False
-
-	if print_all:
-		print '#--------------------------------#'
-		print '#-------- filewalker.py ---------#'
-		print '#--------------------------------#'
+	'''accept **kwargs: 
+		'root'			(default: current dir)
+		'max_depth' 	(default: None [i.e., traverse entire tree]; accepts integers)
+		'print_all' 	(default: True; print all messages to stdout)
 	
+	Recursively walk a file hierarchy, depth-first. 
+	Each file/dir encountered becomes a node added to the file_tree, 
+		and appended to the respective `files` list or `dirs` list
+	All nodes are accessible from successive `children` lists starting at the root node. 
+	
+	'''		
+	print_all = False if kwargs.get('print_all') == False else True
+	global print_all
+
+	ps('#--------------------------------#\n#-------- filewalker.py ---------#\n#--------------------------------#')
+	
+	#----------------------------#
 	#---initialize some things---#
+	#----------------------------#
 	curr_depth = 0
 	all_file_list = []
 	all_dir_list = []
@@ -142,21 +175,24 @@ def walk(**kwargs):
 	root = get_root(**kwargs)
 	max_depth = get_max_depth(**kwargs)
 	
-	new_node = dir(			#make root
+	new_node = dir(			#make root node
 		name	= root.split('/')[-1],
 		rel		= '',
 		abs		= root,
 		size	= 0,
 		parent 	= '',
-		depth = -1
+		depth	= -1
 	)
 	
 	f_tree = file_tree(new_node)
 	curr_node_list.append(new_node)	
 	
-	if print_all:
-		print 'Scanning:',root
-		print '|'+root.split('/')[-1]
+	ps('Scanning: %s' % root)
+	ps('|'+root.split('/')[-1]+'        (root dir)')
+	
+	#----------------------------#
+	#------ begin recursion -----#
+	#----------------------------#
 	
 	def do_walk(curr_depth, curr_node_list):
 		
@@ -178,7 +214,9 @@ def walk(**kwargs):
 			this_node_rel_path = this_node_path[len(root)+1:]	#convert to rel path
 				
 			if not os.path.isdir(this_node_path):		
-				'''node is file'''
+				#------------------------#
+				#----- node is file -----#
+				#------------------------#
 				
 				size = os.path.getsize(this_node_path)
 				
@@ -194,14 +232,15 @@ def walk(**kwargs):
 		
 				curr_node_list[-1].children.append(new_node)
 				
-				if print_all: 
-					msg = ' |'+curr_depth*'-'+this_node
-					print msg+(30-len(msg))*' '+' f_ ('+str(size)+' bytes)'
+				msg = ' '*curr_depth+'|'+this_node
+				ps( msg + (30-len(msg))*' '+ ' f_ (%s)'    % new_node.fsize  )
 				
 				file_size_sum += size
 				
 			else:									
-				'''node is dir'''
+				#------------------------#
+				#----- node is dir ------#
+				#------------------------#
 							
 				new_node = dir(
 					name	= this_node,
@@ -215,9 +254,8 @@ def walk(**kwargs):
 				
 				curr_node_list[-1].children.append(new_node)
 				
-				if print_all: 
-					msg = ' |'+curr_depth*'-'+this_node	
-					print msg+(30-len(msg))*' '+'_d'
+				ps(msg = ' |'+curr_depth*'-'+this_node)	
+				ps(msg+(30-len(msg))*' '+'_d')
 				
 				if max_depth is None or curr_depth < max_depth:
 					'''recurse through directories'''
@@ -233,6 +271,10 @@ def walk(**kwargs):
 			for child in curr_node_list[-1].children:
 				contents_size += child.size
 			curr_node_list[-1].size = contents_size
+			fsize = format_size(contents_size)
+			curr_node_list[-1].fsize = fsize
+			curr_node_list[-1].fsize0 = fsize.split(' ')[0]
+			curr_node_list[-1].fsize1 = fsize.split(' ')[1]
 			curr_node_list.pop()
 		
 		return curr_depth - 1, curr_node_list
@@ -244,13 +286,13 @@ def walk(**kwargs):
 		print
 		print 'File tree with contents sizes:'
 		print '------------------------------'
-		print f_tree.root.name
+		print f_tree.root.name + '     (root)'
 		def post_walk(node):
 			for child in node.children:
-				phrase = '|'+'-'*child.depth+child.name
-				print phrase,(26-len(phrase))*' ','|'+'-'*child.depth+'('+child.type+')',
-				mod_size = str(child.size)[::-1]
-				print ','.join([ mod_size[x:x+3] for x in range(0,len(mod_size),3) ])[::-1],'b'
+				#phrase = '|' + '-'*child.depth + child.name
+				phrase = ' '*child.depth + '|' + child.name
+				print phrase,(26-len(phrase))*' ','|'+'('+child.type+')',child.fsize0 + ' '*(6 - len(child.fsize0))+child.fsize1
+
 				if child.type == 'd':
 					post_walk(child)
 		
