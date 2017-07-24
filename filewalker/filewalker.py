@@ -120,9 +120,8 @@ def get_root(**kwargs):
 
 
 def get_max_depth(**kwargs):
-	max_depth = None
-	if 'max_depth' in kwargs.keys() and kwargs['max_depth'] is not None:
-		max_depth = kwargs['max_depth']
+	max_depth = kwargs.get('max_depth')
+	if max_depth is not None:
 		try:
 			max_depth = int(max_depth)
 		except:
@@ -188,7 +187,10 @@ def walk(**kwargs):
 	curr_node_list.append(new_node)	
 	
 	ps('Scanning: %s' % root)
-	ps('|'+root.split('/')[-1]+'        (root dir)')
+	if (kwargs):
+		ps(' keyword args: %s' % ',  '.join([x+': '+str(kwargs[x]) for x in kwargs]) )
+	ps(root.split('/')[-1]+'        (root dir)')
+	
 	
 	#----------------------------#
 	#------ begin recursion -----#
@@ -233,7 +235,7 @@ def walk(**kwargs):
 				curr_node_list[-1].children.append(new_node)
 				
 				msg = ' '*curr_depth+'|'+this_node
-				ps( msg + (30-len(msg))*' '+ ' f_ (%s)'    % new_node.fsize  )
+				ps( msg + (30-len(msg))*' '+ ' f_ (%s %s)'    % ( new_node.fsize0+' '*(5-len(new_node.fsize0))  , new_node.fsize1) )
 				
 				file_size_sum += size
 				
@@ -254,7 +256,7 @@ def walk(**kwargs):
 				
 				curr_node_list[-1].children.append(new_node)
 				
-				ps(msg = ' |'+curr_depth*'-'+this_node)	
+				msg = ' '*curr_depth+'|'+this_node
 				ps(msg+(30-len(msg))*' '+'_d')
 				
 				if max_depth is None or curr_depth < max_depth:
@@ -289,7 +291,6 @@ def walk(**kwargs):
 		print f_tree.root.name + '     (root)'
 		def post_walk(node):
 			for child in node.children:
-				#phrase = '|' + '-'*child.depth + child.name
 				phrase = ' '*child.depth + '|' + child.name
 				print phrase,(26-len(phrase))*' ','|'+'('+child.type+')',child.fsize0 + ' '*(6 - len(child.fsize0))+child.fsize1
 
@@ -302,22 +303,21 @@ def walk(**kwargs):
 	#----------- print largest dirs and files -------------#
 	#---------------------------------------------#
 	#
+	
 	print '#----- Largest dirs: -----#'
-	large_dirs = [(x.rel,x.size) for x in sorted(all_dir_list,key=operator.attrgetter('size'))[::-1]][:10]
+	large_dirs = [x for x in sorted(all_dir_list,key=operator.attrgetter('size'))[::-1]][:10]
 	for d in large_dirs:
-		print d[0]
-		mod_size = str(d[1])[::-1]
-		print '  ', ','.join( mod_size[x:x+3] for x in range(0,len(mod_size),3) )[::-1],'b'
+		print d.name
+		print '  '+d.fsize
 	print '#-------------------------#'
 	
 	print
 	
 	print '#----- Largest files: -----#'
-	large_files = [(x.rel,x.size) for x in sorted(all_file_list,key=operator.attrgetter('size'))[::-1]][:10]
+	large_files = [x for x in sorted(all_file_list,key=operator.attrgetter('size'))[::-1]][:10]
 	for f in large_files:
-		print f[0]
-		mod_size = str(f[1])[::-1]
-		print '  ', ','.join( mod_size[x:x+3] for x in range(0,len(mod_size),3) )[::-1],'b'
+		print f.name
+		print '  '+f.fsize
 	print '#-------------------------#'
 	
 	print 'Total directories: %d' 	% len( all_dir_list )
