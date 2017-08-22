@@ -157,8 +157,9 @@ def walk(**kwargs):
 	All nodes are accessible from successive `children` lists starting at the root node. 
 	
 	'''		
-	print_all = False if kwargs.get('print_all') == False else True
 	global print_all
+	print_all = False if kwargs.get('print_all') == False else True
+	
 
 	ps('#--------------------------------#\n#-------- filewalker.py ---------#\n#--------------------------------#')
 	
@@ -169,6 +170,8 @@ def walk(**kwargs):
 	all_file_list = []
 	all_dir_list = []
 	curr_node_list = []
+	length_dict = {}
+	
 	
 	
 	root = get_root(**kwargs)
@@ -234,8 +237,8 @@ def walk(**kwargs):
 		
 				curr_node_list[-1].children.append(new_node)
 				
-				msg = ' '*curr_depth+'|'+this_node
-				ps( msg + (30-len(msg))*' '+ ' f_ (%s %s)'    % ( new_node.fsize0+' '*(5-len(new_node.fsize0))  , new_node.fsize1) )
+				#msg = ' '*curr_depth+'|'+this_node
+				#ps( msg + (30-len(msg))*' '+ ' f_ (%s %s)'    % ( new_node.fsize0+' '*(5-len(new_node.fsize0))  , new_node.fsize1) )
 				
 				file_size_sum += size
 				
@@ -256,8 +259,8 @@ def walk(**kwargs):
 				
 				curr_node_list[-1].children.append(new_node)
 				
-				msg = ' '*curr_depth+'|'+this_node
-				ps(msg+(30-len(msg))*' '+'_d')
+				#msg = ' '*curr_depth+'|'+this_node
+				#ps(msg+(30-len(msg))*' '+'_d')
 				
 				if max_depth is None or curr_depth < max_depth:
 					'''recurse through directories'''
@@ -269,9 +272,14 @@ def walk(**kwargs):
 					return curr_depth -1, curr_node_list
 		else:	
 			'''contents of folder explored; calculate size of total contents'''
-			contents_size = 0
+			contents_size = 0			
 			for child in curr_node_list[-1].children:
 				contents_size += child.size
+				nlength = len(child.name)
+				if nlength in length_dict.keys():
+					length_dict[nlength] += 1				
+				else:
+					length_dict[nlength] = 1
 			curr_node_list[-1].size = contents_size
 			fsize = format_size(contents_size)
 			curr_node_list[-1].fsize = fsize
@@ -283,6 +291,8 @@ def walk(**kwargs):
 	curr_depth, curr_node_list = do_walk(curr_depth, curr_node_list)
 	
 	
+	maxlength = max(length_dict.keys())
+	
 	
 	if print_all:
 		print
@@ -291,18 +301,17 @@ def walk(**kwargs):
 		print f_tree.root.name + '     (root)'
 		def post_walk(node):
 			for child in node.children:
-				phrase = ' '*child.depth + '|' + child.name
-				print phrase,(26-len(phrase))*' ','|'+'('+child.type+')',child.fsize0 + ' '*(6 - len(child.fsize0))+child.fsize1
-
+				spacer = (' ' if child.type == 'f' else '-')*(maxlength - len(child.name))
+				print '%s|%s %s |%s %s%s %s' % (' '*child.depth, child.name, spacer, child.type, ' '*(5-len(child.fsize0)),child.fsize0, child.fsize1 )
 				if child.type == 'd':
 					post_walk(child)
 		
 		post_walk(f_tree.root)
 	
 	
-	#----------- print largest dirs and files -------------#
-	#---------------------------------------------#
-	#
+	#-----------------------------------------#
+	#----- print largest dirs and files ------#
+	#-----------------------------------------#
 	
 	print '#----- Largest dirs: -----#'
 	large_dirs = [x for x in sorted(all_dir_list,key=operator.attrgetter('size'))[::-1]][:10]
@@ -323,22 +332,19 @@ def walk(**kwargs):
 	print 'Total directories: %d' 	% len( all_dir_list )
 	print 'Total files: %d' 		% len( all_file_list ) 
 	
-	tfs =  sum([ x.size for x in all_file_list ])
+	tfs =  sum([ x.size for x in all_file_list ])	# tfs = total file(s) size
 	fsize = format_size(tfs)
 	
 	print 'Total file(s) size: %s' % fsize
-	
-	#
-	#---------------------------------------------#
-	#----------- print largest dirs and files -------------#
-	
-	
-	#--- output from filewalker	---#
-	return all_file_list, all_dir_list, f_tree
+
 	#------------------------------#
+	#--- output from filewalker	---#
+	#------------------------------#
+	return all_file_list, all_dir_list, f_tree
+	
 
 
 def main():
-	pass
+	walk()
 if __name__ == '__main__':
 	main()
