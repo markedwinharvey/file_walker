@@ -90,6 +90,11 @@ class dir():
 		self.fsize0 	= self.fsize.split(' ')[0]
 		self.fsize1 	= self.fsize.split(' ')[1]
 
+class _error():
+	def __init__(self, node_path, error):
+		self.node_path = node_path
+		self.error = error
+
 
 #-------------------------#
 #---- misc. functions ----#
@@ -169,6 +174,7 @@ def walk(**kwargs):
 	curr_depth = 0
 	all_file_list = []
 	all_dir_list = []
+	all_error_list = []
 	curr_node_list = []
 	length_dict = {}
 	
@@ -203,7 +209,7 @@ def walk(**kwargs):
 		
 		this_dir_path = curr_node_list[-1].abs
 		
-		cmd = 'ls %s' % str(this_dir_path)
+		cmd = 'ls "%s"	' % str(this_dir_path)
 		folder_contents = [x for x in sp.Popen([cmd],stdout=sp.PIPE,shell=True).communicate()[0].split('\n') if x]
 		
 		if not folder_contents:
@@ -223,8 +229,16 @@ def walk(**kwargs):
 				#----- node is file -----#
 				#------------------------#
 				
-				size = os.path.getsize(this_node_path)
+				try:
+					size = os.path.getsize(this_node_path)
+				except Exception as e:
+					print 'Warning: found error\n\t%s' % e
+					new_error = _error(this_node_path, e)
+					all_error_list.append(new_error)
+					continue
+					
 				
+								
 				new_node = file(
 					name	= this_node,
 					rel		= this_node_rel_path,
@@ -259,8 +273,8 @@ def walk(**kwargs):
 				
 				curr_node_list[-1].children.append(new_node)
 				
-				#msg = ' '*curr_depth+'|'+this_node
-				#ps(msg+(30-len(msg))*' '+'_d')
+				msg = ' '*curr_depth+'|'+this_node
+				ps(msg+(30-len(msg))*' '+'_d')
 				
 				if max_depth is None or curr_depth < max_depth:
 					'''recurse through directories'''
@@ -313,19 +327,24 @@ def walk(**kwargs):
 	#----- print largest dirs and files ------#
 	#-----------------------------------------#
 	
+	print '#------ Error list: ------#'
+	for error in all_error_list:
+		print 'Error on \"%s\": %s' % (error.node_path, error.error)
+	print '#-------------------------#'
+	print
+	
 	print '#----- Largest dirs: -----#'
 	large_dirs = [x for x in sorted(all_dir_list,key=operator.attrgetter('size'))[::-1]][:10]
 	for d in large_dirs:
-		print d.name
+		print d.abs
 		print '  '+d.fsize
-	print '#-------------------------#'
-	
+	print '#-------------------------#'	
 	print
 	
 	print '#----- Largest files: -----#'
 	large_files = [x for x in sorted(all_file_list,key=operator.attrgetter('size'))[::-1]][:10]
 	for f in large_files:
-		print f.name
+		print f.abs
 		print '  '+f.fsize
 	print '#-------------------------#'
 	
@@ -336,7 +355,7 @@ def walk(**kwargs):
 	fsize = format_size(tfs)
 	
 	print 'Total file(s) size: %s' % fsize
-
+	
 	#------------------------------#
 	#--- output from filewalker	---#
 	#------------------------------#
